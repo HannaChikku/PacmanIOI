@@ -6,9 +6,7 @@
 #include <functional>
 #include <vector>
 
-// ─────────────────────────────────────────────
-//  Procedural audio
-// ─────────────────────────────────────────────
+
 static const unsigned SAMPLE_RATE = 44100;
 
 inline sf::SoundBuffer makeSoundBuffer(float duration,
