@@ -23,6 +23,8 @@
 // sounds wali file ko include kiya (procedural audio)
 #include "sounds.h"
 
+#include "ghost_system.h"
+
 // victory_screen wali file ko include kiya (end screen UI)
 #include "victory_screen.h"
 
@@ -48,6 +50,8 @@ int main() {
 
   // game starts
   Entity pacman;
+  std::vector<Ghost> ghosts = initializeGhosts(uiOffset);
+  int lives = 3;  // Starting lives
   int score = 0;
   bool hasShield = false;
   float shieldTimer = 0.f;
@@ -118,6 +122,21 @@ int main() {
       handlePacmanInput(pacman);
       moveEntity(pacman, PACMAN_SPEED, false, dt, uiOffset, mapW);
 
+      // Update ghosts AI and movement
+      updateGhosts(ghosts, pacman, dt, uiOffset);
+      
+      // Check ghost collisions
+      bool hitByGhost = checkGhostCollision(pacman, ghosts, hasShield, hasPower, sEat, sDth);
+      if (hitByGhost) {
+          --lives;
+          if (lives <= 0) {
+              gameState = GameState::GameOver;
+              break;
+          }
+          // Reset Pacman position after hit
+          pacman.pos = pacSpawn;
+      }
+
       // Collect orbs that Pac-Man touches and play blop sound
       size_t orbsBefore = orbs.size();
       collectOrbs(orbs, pacman.pos, score);
@@ -143,7 +162,8 @@ int main() {
               break;
             case PowerupType::Power:
               hasPower = true;
-              powerTimer = 8.0f;  // 8 sec power boost
+              powerTimer = 8.0f;
+              frightenGhosts(ghosts, 8.0f);  // Ghosts become frightened!
               sPow.play();
               break;
             case PowerupType::Shield:
@@ -156,7 +176,7 @@ int main() {
       }
 
       // Tick powerup timers
-      if (hasPower) { powerTimer -= dt; if (powerTimer <= 0.f) hasPower = false; }
+      if (hasPower) { powerTimer -= dt; if (powerTimer <= 0.f) {hasPower = false; unfrightenGhosts(ghosts); } } // Ghosts return to normal }
       if (hasShield) { shieldTimer -= dt; if (shieldTimer <= 0.f) hasShield = false; }
 
       window.clear(sf::Color::Black);
@@ -179,12 +199,15 @@ int main() {
       // Animated chomping Pac-Man draw
       drawPacman(window, pacman.pos, pacman.color, pacman.currentDir, animTime);
 
+       // Draw ghosts
+      drawGhosts(window, ghosts, animTime);
+
       // Draw shield aura around Pac-Man if active
       if (hasShield)
         drawShieldAura(window, pacman.pos, animTime);
 
-      // Draw score HUD
-      drawScore(window, font, score);
+      // Draw score and lives HUD
+      drawScore(window, font, score, lives);
 
       window.display();
     }
@@ -194,6 +217,20 @@ int main() {
       bool won = (gameState == GameState::GameWon);
       EndScreen endScreen(font, won);
       EndChoice choice = endScreen.run(window);
+
+  auto resetGame = [&]() {
+    pacman.pos = pacSpawn;
+    pacman.currentDir = Direction::Left;
+    pacman.queuedDir = Direction::Left;
+    pacman.color = sf::Color::Yellow;
+    score = 0;
+    lives = 3;  // Reset lives
+    hasShield = false; shieldTimer = 0.f;
+    hasPower = false;  powerTimer = 0.f;
+    ghosts = initializeGhosts(uiOffset);  // Reset ghosts
+    orbs = spawnOrbs(uiOffset);
+    powerups = spawnPowerups();
+  };  
 
       if (choice == EndChoice::PlayAgain) {
         // Re-open the window if it was closed by the end screen
@@ -207,10 +244,10 @@ int main() {
       } else {
         keepPlaying = false;
       }
-    } else {
+    }
+     else {
       keepPlaying = false;
     }
   }
-
-  return 0;
+ return 0;
 }

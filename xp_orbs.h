@@ -32,11 +32,19 @@ inline void drawOrbs(sf::RenderWindow &window,
 
 
 inline void drawScore(sf::RenderWindow &window, const sf::Font &font,
-                      int score) {
+                      int score, int lives = -1) {
   sf::Text sc(font, "Score: " + std::to_string(score), 24);
   sc.setFillColor(sf::Color::White);
   sc.setPosition({10, 5});
   window.draw(sc);
+  
+  // Draw lives if provided
+  if (lives >= 0) {
+    sf::Text livesText(font, "Lives: " + std::to_string(lives), 24);
+    livesText.setFillColor(sf::Color::Yellow);
+    livesText.setPosition({static_cast<float>(window.getSize().x) - 150.f, 5.f});
+    window.draw(livesText);
+  }
 }
 
 
